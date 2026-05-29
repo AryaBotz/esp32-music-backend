@@ -6,7 +6,7 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-const CLIENT_ID = "YOUR_JAMENDO_CLIENT_ID";
+const CLIENT_ID = "7f47ab48";
 
 // mapping mood → query Jamendo
 function buildQuery(core, sub) {
