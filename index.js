@@ -1,120 +1,187 @@
 const express = require("express");
-const cors = require("cors");
 const axios = require("axios");
+const cors = require("cors");
+require("dotenv").config();
 
 const app = express();
+
 app.use(cors());
 app.use(express.json());
 
-const CLIENT_ID = process.env.CLIENT_ID;
+const PORT = process.env.PORT || 3000;
 
-// ======================
-// MOOD DETECTOR (bisa nanti diganti Groq)
-// ======================
-function getMood(text) {
-  text = text.toLowerCase();
+const moods = {
+  focus: [
+    "lofi study",
+    "deep focus ambient",
+    "coding synthwave",
+    "study beat hiphop"
+  ],
 
-  if (text.includes("fokus") || text.includes("belajar")) return { core: "focus" };
-  if (text.includes("sedih")) return { core: "sad" };
-  if (text.includes("semangat") || text.includes("gym")) return { core: "energy" };
-  if (text.includes("tidur")) return { core: "sleep" };
-  if (text.includes("tenang") || text.includes("santai")) return { core: "relax" };
+  sad: [
+    "sad piano",
+    "emotional ambient",
+    "lonely guitar",
+    "melancholic chill"
+  ],
 
-  return { core: "chill" };
+  happy: [
+    "happy upbeat",
+    "summer pop",
+    "funk groove",
+    "dance electronic"
+  ],
+
+  relax: [
+    "rain ambient",
+    "calm meditation",
+    "soft sleep music",
+    "nature chill"
+  ],
+
+  energetic: [
+    "workout edm",
+    "rock energy",
+    "gaming trap",
+    "epic motivation"
+  ]
+};
+
+async function askGroq(userText) {
+
+  const prompt = `
+You are an AI mood detector.
+
+Analyze the user's emotion.
+
+Return JSON only.
+
+Format:
+{
+  "core":"focus",
+  "query":"lofi coding night"
 }
 
-// ======================
-// QUERY MAP
-// ======================
-function buildQuery(core) {
-  const map = {
-    chill: "lofi chill ambient",
-    focus: "lofi study piano",
-    sad: "sad piano ambient",
-    energy: "electronic workout",
-    relax: "calm ambient soft",
-    sleep: "sleep rain ambient"
-  };
+Available moods:
+focus
+sad
+happy
+relax
+energetic
 
-  return map[core] || "lofi chill";
+User:
+${userText}
+`;
+
+  const response = await axios.post(
+    "https://api.groq.com/openai/v1/chat/completions",
+    {
+      model: "llama-3.1-8b-instant",
+      messages: [
+        {
+          role: "user",
+          content: prompt
+        }
+      ],
+      temperature: 0.7
+    },
+    {
+      headers: {
+        Authorization: `Bearer ${process.env.GROQ_API_KEY}`,
+        "Content-Type": "application/json"
+      }
+    }
+  );
+
+  const raw =
+    response.data.choices[0].message.content;
+
+  return JSON.parse(raw);
 }
 
-// ======================
-// CLEAN URL (FIX BUG KAMU)
-// ======================
-function cleanUrl(url) {
-  if (!url) return null;
-  return url.replace(/\s/g, "");
-}
-
-// ======================
-// JAMENDO SEARCH
-// ======================
 async function searchJamendo(query) {
-  try {
-    const url =
-      `https://api.jamendo.com/v3.0/tracks/?client_id=${CLIENT_ID}&format=json&limit=1&search=${encodeURIComponent(query)}`;
 
-    const res = await axios.get(url);
+  const url =
+    `https://api.jamendo.com/v3.0/tracks/?client_id=${process.env.JAMENDO_CLIENT_ID}&format=json&limit=10&search=${encodeURIComponent(query)}&audioformat=mp31`;
 
-    return res.data.results?.[0] || null;
-  } catch (e) {
-    console.log("Jamendo error:", e.message);
+  const response = await axios.get(url);
+
+  const results = response.data.results;
+
+  if (!results || results.length === 0) {
     return null;
   }
+
+  const random =
+    results[Math.floor(Math.random() * results.length)];
+
+  return {
+    title: random.name,
+    audio_url: random.audio
+  };
 }
 
-// ======================
-// MAIN API
-// ======================
+async function fallbackMusic(coreMood) {
+
+  const arr = moods[coreMood] || moods.relax;
+
+  const randomQuery =
+    arr[Math.floor(Math.random() * arr.length)];
+
+  return await searchJamendo(randomQuery);
+}
+
 app.post("/music", async (req, res) => {
+
   try {
-    const { text } = req.body;
 
-    const mood = getMood(text);
-    let query = buildQuery(mood.core);
+    const userText = req.body.text;
 
-    let track = await searchJamendo(query);
+    console.log("USER:", userText);
 
-    // fallback 1
-    if (!track) {
-      const fallback = {
-        chill: "lofi",
-        focus: "piano",
-        sad: "sad piano",
-        energy: "electronic",
-        relax: "ambient",
-        sleep: "sleep"
-      };
+    const ai = await askGroq(userText);
 
-      query = fallback[mood.core] || "lofi";
-      track = await searchJamendo(query);
+    console.log("AI:", ai);
+
+    let music =
+      await searchJamendo(ai.query);
+
+    if (!music) {
+
+      console.log("Fallback activated");
+
+      music =
+        await fallbackMusic(ai.core);
     }
 
-    // fallback 2 (radio)
-    if (!track) {
+    if (!music) {
+
       return res.json({
-        core: mood.core,
-        title: "radio fallback",
-        audio_url: "http://stream.zeno.fm/fq6k5f5z5f8uv"
+        error: "music not found"
       });
     }
 
-    return res.json({
-      core: mood.core,
-      title: track.name,
-      audio_url: cleanUrl(track.audio)
+    res.json({
+      mood: ai.core,
+      ai_query: ai.query,
+      title: music.title,
+      audio_url: music.audio_url
     });
 
   } catch (err) {
-    console.log(err);
 
-    return res.json({
-      error: "server error",
-      audio_url: "http://stream.zeno.fm/fq6k5f5z5f8uv"
+    console.log(err.message);
+
+    res.status(500).json({
+      error: err.message
     });
   }
 });
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log("Server running:", PORT));
+app.get("/", (req, res) => {
+  res.send("ESP32 AI MUSIC SERVER ONLINE");
+});
+
+app.listen(PORT, () => {
+  console.log("SERVER RUNNING");
+});
