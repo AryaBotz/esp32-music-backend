@@ -3,43 +3,28 @@ const cors = require("cors");
 const axios = require("axios");
 
 const app = express();
-
 app.use(cors());
 app.use(express.json());
 
 const CLIENT_ID = process.env.CLIENT_ID;
 
 // ======================
-// 1. MOOD DETECTOR
+// MOOD DETECTOR (bisa nanti diganti Groq)
 // ======================
 function getMood(text) {
   text = text.toLowerCase();
 
-  if (text.includes("fokus") || text.includes("belajar")) {
-    return { core: "focus" };
-  }
-
-  if (text.includes("sedih")) {
-    return { core: "sad" };
-  }
-
-  if (text.includes("semangat") || text.includes("gym")) {
-    return { core: "energy" };
-  }
-
-  if (text.includes("tidur")) {
-    return { core: "sleep" };
-  }
-
-  if (text.includes("tenang") || text.includes("santai")) {
-    return { core: "relax" };
-  }
+  if (text.includes("fokus") || text.includes("belajar")) return { core: "focus" };
+  if (text.includes("sedih")) return { core: "sad" };
+  if (text.includes("semangat") || text.includes("gym")) return { core: "energy" };
+  if (text.includes("tidur")) return { core: "sleep" };
+  if (text.includes("tenang") || text.includes("santai")) return { core: "relax" };
 
   return { core: "chill" };
 }
 
 // ======================
-// 2. QUERY MAPPER
+// QUERY MAP
 // ======================
 function buildQuery(core) {
   const map = {
@@ -55,17 +40,15 @@ function buildQuery(core) {
 }
 
 // ======================
-// 3. SAFE TRACK HANDLER
+// CLEAN URL (FIX BUG KAMU)
 // ======================
-function safeTrack(results) {
-  if (results && results.length > 0) {
-    return results[0];
-  }
-  return null;
+function cleanUrl(url) {
+  if (!url) return null;
+  return url.replace(/\s/g, "");
 }
 
 // ======================
-// 4. JAMENDO REQUEST
+// JAMENDO SEARCH
 // ======================
 async function searchJamendo(query) {
   try {
@@ -74,40 +57,28 @@ async function searchJamendo(query) {
 
     const res = await axios.get(url);
 
-    return safeTrack(res.data.results);
-  } catch (err) {
-    console.log("Jamendo error:", err.message);
+    return res.data.results?.[0] || null;
+  } catch (e) {
+    console.log("Jamendo error:", e.message);
     return null;
   }
 }
 
 // ======================
-// 5. MAIN ROUTE
+// MAIN API
 // ======================
 app.post("/music", async (req, res) => {
   try {
     const { text } = req.body;
 
-    if (!text) {
-      return res.json({
-        error: "no text input"
-      });
-    }
-
-    // STEP 1: mood detect
     const mood = getMood(text);
-
-    // STEP 2: build query
     let query = buildQuery(mood.core);
 
-    // STEP 3: search jamendo
     let track = await searchJamendo(query);
 
-    // STEP 4: fallback query kalau kosong
+    // fallback 1
     if (!track) {
-      console.log("Fallback triggered");
-
-      const fallbackMap = {
+      const fallback = {
         chill: "lofi",
         focus: "piano",
         sad: "sad piano",
@@ -116,42 +87,34 @@ app.post("/music", async (req, res) => {
         sleep: "sleep"
       };
 
-      query = fallbackMap[mood.core] || "lofi";
-
+      query = fallback[mood.core] || "lofi";
       track = await searchJamendo(query);
     }
 
-    // STEP 5: hard fallback radio
+    // fallback 2 (radio)
     if (!track) {
       return res.json({
         core: mood.core,
-        title: "Radio fallback",
+        title: "radio fallback",
         audio_url: "http://stream.zeno.fm/fq6k5f5z5f8uv"
       });
     }
 
-    // STEP 6: success response
     return res.json({
       core: mood.core,
       title: track.name,
-      audio_url: track.audio
+      audio_url: cleanUrl(track.audio)
     });
 
   } catch (err) {
-    console.log("Server error:", err);
+    console.log(err);
 
     return res.json({
-      error: "server crash",
+      error: "server error",
       audio_url: "http://stream.zeno.fm/fq6k5f5z5f8uv"
     });
   }
 });
 
-// ======================
-// 6. START SERVER
-// ======================
 const PORT = process.env.PORT || 3000;
-
-app.listen(PORT, () => {
-  console.log("Server running on port", PORT);
-});
+app.listen(PORT, () => console.log("Server running:", PORT));
