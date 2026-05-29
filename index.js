@@ -3,70 +3,155 @@ const cors = require("cors");
 const axios = require("axios");
 
 const app = express();
+
 app.use(cors());
 app.use(express.json());
 
-const CLIENT_ID = "7f47ab48";
+const CLIENT_ID = process.env.CLIENT_ID;
 
-// mapping mood → query Jamendo
-function buildQuery(core, sub) {
+// ======================
+// 1. MOOD DETECTOR
+// ======================
+function getMood(text) {
+  text = text.toLowerCase();
+
+  if (text.includes("fokus") || text.includes("belajar")) {
+    return { core: "focus" };
+  }
+
+  if (text.includes("sedih")) {
+    return { core: "sad" };
+  }
+
+  if (text.includes("semangat") || text.includes("gym")) {
+    return { core: "energy" };
+  }
+
+  if (text.includes("tidur")) {
+    return { core: "sleep" };
+  }
+
+  if (text.includes("tenang") || text.includes("santai")) {
+    return { core: "relax" };
+  }
+
+  return { core: "chill" };
+}
+
+// ======================
+// 2. QUERY MAPPER
+// ======================
+function buildQuery(core) {
   const map = {
     chill: "lofi chill ambient",
-    focus: "deep study ambient piano",
-    happy: "upbeat acoustic pop",
-    sad: "sad piano cinematic",
-    energy: "electronic workout hype",
-    relax: "calm soft ambient",
-    sleep: "deep sleep rain ambient",
-    romantic: "love acoustic piano",
-    dark: "dark cinematic ambient"
+    focus: "lofi study piano",
+    sad: "sad piano ambient",
+    energy: "electronic workout",
+    relax: "calm ambient soft",
+    sleep: "sleep rain ambient"
   };
 
-  return (map[core] || "lofi chill") + " " + (sub || "");
+  return map[core] || "lofi chill";
 }
 
-// (optional) simple mock AI kalau Groq belum dipakai
-async function getMood(text) {
-  if (text.includes("fokus")) return { core: "focus", sub: "deep focus" };
-  if (text.includes("sedih")) return { core: "sad", sub: "lonely piano" };
-  if (text.includes("semangat")) return { core: "energy", sub: "workout" };
-  return { core: "chill", sub: "lofi" };
+// ======================
+// 3. SAFE TRACK HANDLER
+// ======================
+function safeTrack(results) {
+  if (results && results.length > 0) {
+    return results[0];
+  }
+  return null;
 }
 
+// ======================
+// 4. JAMENDO REQUEST
+// ======================
+async function searchJamendo(query) {
+  try {
+    const url =
+      `https://api.jamendo.com/v3.0/tracks/?client_id=${CLIENT_ID}&format=json&limit=1&search=${encodeURIComponent(query)}`;
+
+    const res = await axios.get(url);
+
+    return safeTrack(res.data.results);
+  } catch (err) {
+    console.log("Jamendo error:", err.message);
+    return null;
+  }
+}
+
+// ======================
+// 5. MAIN ROUTE
+// ======================
 app.post("/music", async (req, res) => {
   try {
     const { text } = req.body;
 
-    // 1. convert ke mood
-    const mood = await getMood(text);
-
-    // 2. build query
-    const query = buildQuery(mood.core, mood.sub);
-
-    // 3. search Jamendo
-    const url =
-      `https://api.jamendo.com/v3.0/tracks/?client_id=${CLIENT_ID}&format=json&limit=1&search=${encodeURIComponent(query)}`;
-
-    const response = await axios.get(url);
-
-    const track = response.data.results?.[0];
-
-    if (!track) {
-      return res.json({ error: "not found", mood });
+    if (!text) {
+      return res.json({
+        error: "no text input"
+      });
     }
 
-    // 4. return audio
-    res.json({
+    // STEP 1: mood detect
+    const mood = getMood(text);
+
+    // STEP 2: build query
+    let query = buildQuery(mood.core);
+
+    // STEP 3: search jamendo
+    let track = await searchJamendo(query);
+
+    // STEP 4: fallback query kalau kosong
+    if (!track) {
+      console.log("Fallback triggered");
+
+      const fallbackMap = {
+        chill: "lofi",
+        focus: "piano",
+        sad: "sad piano",
+        energy: "electronic",
+        relax: "ambient",
+        sleep: "sleep"
+      };
+
+      query = fallbackMap[mood.core] || "lofi";
+
+      track = await searchJamendo(query);
+    }
+
+    // STEP 5: hard fallback radio
+    if (!track) {
+      return res.json({
+        core: mood.core,
+        title: "Radio fallback",
+        audio_url: "http://stream.zeno.fm/fq6k5f5z5f8uv"
+      });
+    }
+
+    // STEP 6: success response
+    return res.json({
       core: mood.core,
-      sub: mood.sub,
       title: track.name,
       audio_url: track.audio
     });
 
   } catch (err) {
-    console.log(err);
-    res.status(500).json({ error: "server error" });
+    console.log("Server error:", err);
+
+    return res.json({
+      error: "server crash",
+      audio_url: "http://stream.zeno.fm/fq6k5f5z5f8uv"
+    });
   }
 });
 
-app.listen(process.env.PORT || 3000);
+// ======================
+// 6. START SERVER
+// ======================
+const PORT = process.env.PORT || 3000;
+
+app.listen(PORT, () => {
+  console.log("Server running on port", PORT);
+});
