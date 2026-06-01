@@ -38,11 +38,8 @@ router.post(
         req.file.size
       );
 
-      const fileStream =
-        fs.createReadStream(req.file.path);
-
       const result =
-        await whisper(fileStream);
+        await whisper(req.file.path);
 
       console.log(
         "[WHISPER RESULT]",
