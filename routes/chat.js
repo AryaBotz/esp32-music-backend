@@ -21,26 +21,8 @@ async function processChat(text) {
   };
 }
 
-// EXPORT CLEAN (INI KUNCI)
-module.exports = {
-  router,
-  processChat
-};
+// EXPORT ROUTER SAJA (INI PENTING)
+module.exports = router;
 
-// express route
-router.post("/", async (req, res) => {
-
-  try {
-
-    const text = req.body.text;
-
-    const result = await processChat(text);
-
-    res.json(result);
-
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "chat failed" });
-  }
-
-});
+// expose function via attach (optional pattern)
+router.processChat = processChat;
