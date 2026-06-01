@@ -12,6 +12,7 @@ app.use(express.json({ limit: "10mb" }));
 app.use("/stt", require("./routes/stt"));
 app.use("/ai", require("./routes/ai"));
 app.use("/music", require("./routes/music")); // 🔥 INI YANG KAMU LUPA
+app.use("/voice", require("./routes/voice"));
 
 // =====================
 // HEALTH CHECK
