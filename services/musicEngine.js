@@ -1,45 +1,29 @@
-const axios = require("axios");
+const fetch = require("node-fetch");
 
-const CLIENT_ID = process.env.JAMENDO_CLIENT_ID;
+const JAMENDO_CLIENT_ID = process.env.JAMENDO_CLIENT_ID;
 
 async function getMusicFromMood(mood) {
 
-  const map = {
-    sad: "lofi sad",
-    happy: "happy upbeat",
-    focus: "lofi focus",
-    sleep: "sleep ambient",
-    neutral: "chill"
+  const tagMap = {
+    sad: "sad",
+    happy: "happy",
+    focus: "chill",
+    sleep: "sleep",
+    neutral: "ambient"
   };
 
-  const query = map[mood] || "chill";
+  const tag = tagMap[mood] || "ambient";
 
-  try {
+  const url = `https://api.jamendo.com/v3.0/tracks/?client_id=${JAMENDO_CLIENT_ID}&format=json&limit=1&tags=${tag}&audioformat=mp31`;
 
-    const res = await axios.get(
-      "https://api.jamendo.com/v3.0/tracks/",
-      {
-        params: {
-          client_id: CLIENT_ID,
-          format: "json",
-          limit: 1,
-          search: query,
-          audioformat: "mp31"
-        }
-      }
-    );
+  const res = await fetch(url);
+  const data = await res.json();
 
-    const track = res.data.results?.[0];
+  const track = data?.results?.[0];
 
-    return track?.audio || fallback();
+  if (!track) return null;
 
-  } catch (err) {
-    return fallback();
-  }
-}
-
-function fallback() {
-  return "https://filesamples.com/samples/audio/mp3/sample1.mp3";
+  return track.audio;
 }
 
 module.exports = { getMusicFromMood };
