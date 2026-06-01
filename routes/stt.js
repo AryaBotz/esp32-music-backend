@@ -10,7 +10,13 @@ router.post("/", upload.single("audio"), async (req, res) => {
 
   try {
 
+    if (!req.file) {
+      return res.status(400).json({ error: "no audio file" });
+    }
+
     const text = await transcribeAudio(req.file.path);
+
+    console.log("TRANSCRIPT:", text);
 
     const result = await chatRoute.processChat(text);
 
