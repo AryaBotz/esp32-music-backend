@@ -13,10 +13,10 @@ const { searchTrack } = require("../services/jamendo");
 
 router.post("/", upload.single("audio"), async (req, res) => {
   try {
-    // 🔴 VALIDASI FILE WAJIB
+    // VALIDASI FILE
     if (!req.file) {
       return res.status(400).json({
-        error: "No audio file received. Field name must be 'audio'"
+        error: "audio file missing (field name must be 'audio')",
       });
     }
 
@@ -24,16 +24,22 @@ router.post("/", upload.single("audio"), async (req, res) => {
 
     const filePath = req.file.path;
 
-    // ========= STT =========
+    // =====================
+    // STT
+    // =====================
     const text = await transcribe(filePath);
 
-    // ========= AI =========
+    // =====================
+    // AI ANALYSIS
+    // =====================
     const ai = await analyzeMood(text);
 
-    // ========= MUSIC SEARCH =========
+    // =====================
+    // MUSIC SEARCH
+    // =====================
     const track = await searchTrack(ai.ai_query);
 
-    // cleanup
+    // cleanup file
     fs.unlinkSync(filePath);
 
     return res.json({
@@ -45,15 +51,14 @@ router.post("/", upload.single("audio"), async (req, res) => {
       artist: track?.artist || "Unknown",
       audio_url:
         track?.audio_url ||
-        "https://prod-1.storage.jamendo.com/?trackid=1446611&format=mp31"
+        "https://prod-1.storage.jamendo.com/?trackid=1446611&format=mp31",
     });
-
   } catch (err) {
-    console.error(err);
+    console.error("[VOICE ERROR]", err);
 
     return res.status(500).json({
       error: "Voice pipeline failed",
-      detail: err.message
+      detail: err.message,
     });
   }
 });
