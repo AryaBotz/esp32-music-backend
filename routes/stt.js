@@ -1,10 +1,9 @@
 const express = require("express");
 const multer = require("multer");
 const { transcribeAudio } = require("../services/whisperService");
-const { processChat } = require("../services/aiEngine");
+const { processChat } = require("./chat").__processChat;
 
 const router = express.Router();
-
 const upload = multer({ dest: "uploads/" });
 
 router.post("/", upload.single("audio"), async (req, res) => {
@@ -12,14 +11,10 @@ router.post("/", upload.single("audio"), async (req, res) => {
   try {
 
     if (!req.file) {
-      return res.status(400).json({ error: "no audio file" });
+      return res.status(400).json({ error: "no audio" });
     }
 
-    console.log("STT: file received");
-
     const text = await transcribeAudio(req.file.path);
-
-    console.log("TRANSCRIPT:", text);
 
     const result = await processChat(text);
 
@@ -29,7 +24,7 @@ router.post("/", upload.single("audio"), async (req, res) => {
     });
 
   } catch (err) {
-    console.error("STT ERROR:", err);
+    console.error(err);
     res.status(500).json({ error: "stt failed" });
   }
 
