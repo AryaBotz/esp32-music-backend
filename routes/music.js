@@ -3,18 +3,27 @@ const { getMusicFromMood } = require("../services/musicEngine");
 
 const router = express.Router();
 
-router.post("/", (req, res) => {
+router.post("/", async (req, res) => {
 
-  const mood = req.body.mood;
+  try {
 
-  if (!mood) {
-    return res.status(400).json({ error: "mood required" });
+    const mood = req.body.mood;
+
+    if (!mood) {
+      return res.status(400).json({ error: "mood required" });
+    }
+
+    const audio_url = await getMusicFromMood(mood);
+
+    res.json({
+      mood,
+      audio_url
+    });
+
+  } catch (err) {
+    console.error("MUSIC ERROR:", err);
+    res.status(500).json({ error: "music failed" });
   }
-
-  res.json({
-    mood,
-    audio_url: getMusicFromMood(mood)
-  });
 
 });
 
