@@ -1,27 +1,19 @@
 const fs = require("fs");
-const { FormData, File } = require("undici");
 
 const GROQ_API_KEY = process.env.GROQ_API_KEY;
 
 // =====================
-// WHISPER STT (FIXED TOTAL)
+// WHISPER STT (FIX FINAL STABIL)
 // =====================
 async function whisper(filePath) {
-  if (!fs.existsSync(filePath)) {
-    throw new Error("File not found: " + filePath);
-  }
-
   const buffer = fs.readFileSync(filePath);
 
-  const form = new FormData();
+  const formData = new FormData();
 
-  // ⚠️ IMPORTANT: pakai File dari undici, bukan Blob / form-data npm
-  const file = new File([buffer], "audio.mp3", {
-    type: "audio/mpeg",
-  });
+  const blob = new Blob([buffer], { type: "audio/mpeg" });
 
-  form.append("file", file);
-  form.append("model", "whisper-large-v3");
+  formData.append("file", blob, "audio.mp3");
+  formData.append("model", "whisper-large-v3");
 
   const res = await fetch(
     "https://api.groq.com/openai/v1/audio/transcriptions",
@@ -30,7 +22,7 @@ async function whisper(filePath) {
       headers: {
         Authorization: `Bearer ${GROQ_API_KEY}`,
       },
-      body: form,
+      body: formData,
     }
   );
 
@@ -49,7 +41,7 @@ async function whisper(filePath) {
 }
 
 // =====================
-// CHAT
+// CHAT LLM
 // =====================
 async function chat(messages) {
   const res = await fetch(
