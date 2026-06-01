@@ -1,43 +1,67 @@
-const axios = require("axios");
+const fetch = require("node-fetch");
+
+const GROQ_API_KEY = process.env.GROQ_API_KEY;
 
 async function analyzeWithLLM(text) {
+  const prompt = `
+You are a strict emotion classifier.
 
-  const response = await axios.post(
-    "https://api.groq.com/openai/v1/chat/completions",
-    {
-      model: "llama-3.1-8b-instant",
-      messages: [
-        {
-          role: "system",
-          content: `
-Return ONLY JSON:
+Analyze user text and return ONLY valid JSON.
+
+Allowed moods:
+- sad
+- happy
+- focus
+- sleep
+- neutral
+
+Allowed intents:
+- music
+- question
+- command
+
+RULES:
+- Return ONLY JSON
+- No markdown
+- No explanation
+
+Format:
 {
   "mood": "sad|happy|focus|sleep|neutral",
   "intent": "music|question|command"
 }
-          `
-        },
-        {
-          role: "user",
-          content: text
-        }
-      ],
-      temperature: 0.2
-    },
-    {
-      headers: {
-        Authorization: `Bearer ${process.env.GROQ_API_KEY}`,
-        "Content-Type": "application/json"
-      }
-    }
-  );
 
-  let content = response.data.choices[0].message.content;
+User text:
+${text}
+`;
+
+  const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${GROQ_API_KEY}`,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      model: "llama-3.1-8b-instant",
+      messages: [{ role: "user", content: prompt }],
+      temperature: 0.2
+    })
+  });
+
+  const data = await res.json();
+
+  let content = data?.choices?.[0]?.message?.content;
+
+  console.log("RAW LLM:", content);
 
   try {
     return JSON.parse(content);
-  } catch {
-    return { mood: "neutral", intent: "music" };
+  } catch (err) {
+    console.log("LLM PARSE ERROR:", content);
+    return {
+      mood: "neutral",
+      intent: "music"
+    };
   }
 }
 
