@@ -1,38 +1,31 @@
 const { chat } = require("./groq");
 
-function safeParse(text) {
-  try {
-    const start = text.indexOf("{");
-    const end = text.lastIndexOf("}");
-
-    if (start === -1 || end === -1) {
-      return null;
-    }
-
-    return JSON.parse(
-      text.substring(start, end + 1)
-    );
-
-  } catch {
-    return null;
-  }
-}
-
 async function analyzeMood(text) {
-
   const llm = await chat([
     {
       role: "system",
       content: `
-You are a STRICT JSON music mood engine.
+You are a STRICT JSON command generator for music system.
 
-Output ONLY JSON.
+RULES:
+- Output ONLY valid JSON
+- No markdown
+- No explanation
+
+Return format:
 
 {
- "mood":"",
- "ai_query":"",
- "intent":"music"
+  "type": "music.search",
+  "query": "string",
+  "energy": "low | medium | high"
 }
+
+Examples:
+Input: aku mau tidur
+Output: {"type":"music.search","query":"sleep ambient rain","energy":"low"}
+
+Input: aku mau semangat
+Output: {"type":"music.search","query":"phonk gym workout","energy":"high"}
 `
     },
     {
@@ -41,22 +34,26 @@ Output ONLY JSON.
     }
   ]);
 
-  const content =
-    llm?.choices?.[0]?.message?.content || "";
+  const content = llm?.choices?.[0]?.message?.content;
 
-  const parsed = safeParse(content);
+  console.log("[AI RAW]", content);
 
-  if (!parsed) {
-    return {
-      mood: "neutral",
-      ai_query: "chill ambient music",
-      intent: "music"
-    };
+  if (!content) return fallback(text);
+
+  try {
+    return JSON.parse(content);
+  } catch (e) {
+    console.log("[AI PARSE FAIL]", e.message);
+    return fallback(text);
   }
-
-  return parsed;
 }
 
-module.exports = {
-  analyzeMood
-};
+function fallback(text) {
+  return {
+    type: "music.search",
+    query: text ? `${text} music` : "lofi chill beats",
+    energy: "medium"
+  };
+}
+
+module.exports = { analyzeMood };
