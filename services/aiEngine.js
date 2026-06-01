@@ -5,24 +5,12 @@ async function processChat(text) {
 
   const mood = detectMood(text);
 
-  const ai_query = buildQuery(text, mood);
-
-  const audio_url = getMusicFromMood(mood);
-
   return {
     mood,
-    ai_query,
-    title: generateTitle(mood),
-    audio_url
+    ai_query: `${mood} ${text}`,
+    title: `Playlist for ${mood}`,
+    audio_url: getMusicFromMood(mood)
   };
-}
-
-function buildQuery(text, mood) {
-  return `${mood} ${text}`;
-}
-
-function generateTitle(mood) {
-  return `Playlist for ${mood}`;
 }
 
 module.exports = { processChat };
