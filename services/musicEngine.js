@@ -31,14 +31,9 @@ async function getMusicFromMood(mood) {
 
     const track = res.data.results?.[0];
 
-    if (!track) {
-      return fallback();
-    }
-
-    return track.audio;
+    return track?.audio || fallback();
 
   } catch (err) {
-    console.error("Jamendo error:", err.message);
     return fallback();
   }
 }
