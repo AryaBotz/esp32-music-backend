@@ -1,3 +1,5 @@
+const FormData = require("form-data");
+
 const GROQ_API_KEY = process.env.GROQ_API_KEY;
 
 // =====================
@@ -5,7 +7,6 @@ const GROQ_API_KEY = process.env.GROQ_API_KEY;
 // =====================
 async function whisper(fileStream) {
 
-  const FormData = require("form-data");
   const form = new FormData();
 
   form.append("file", fileStream);
@@ -16,13 +17,25 @@ async function whisper(fileStream) {
     {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${GROQ_API_KEY}`
+        Authorization: `Bearer ${GROQ_API_KEY}`
       },
       body: form
     }
   );
 
-  return await res.json();
+  const data = await res.json();
+
+  console.log(
+    "[GROQ STT STATUS]",
+    res.status
+  );
+
+  console.log(
+    "[GROQ STT RESPONSE]",
+    JSON.stringify(data, null, 2)
+  );
+
+  return data;
 }
 
 // =====================
@@ -35,7 +48,7 @@ async function chat(messages) {
     {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${GROQ_API_KEY}`,
+        Authorization: `Bearer ${GROQ_API_KEY}`,
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
@@ -48,4 +61,7 @@ async function chat(messages) {
   return await res.json();
 }
 
-module.exports = { whisper, chat };
+module.exports = {
+  whisper,
+  chat
+};
