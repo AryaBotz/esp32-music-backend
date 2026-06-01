@@ -1,5 +1,8 @@
+const express = require("express");
 const { analyzeWithLLM } = require("../services/llmEngine");
 const { getMusicFromMood } = require("../services/musicEngine");
+
+const router = express.Router();
 
 async function processChat(text) {
 
@@ -18,12 +21,13 @@ async function processChat(text) {
   };
 }
 
-// expose for STT
-module.exports.__processChat = processChat;
+// EXPORT CLEAN (INI KUNCI)
+module.exports = {
+  router,
+  processChat
+};
 
-const express = require("express");
-const router = express.Router();
-
+// express route
 router.post("/", async (req, res) => {
 
   try {
@@ -35,9 +39,8 @@ router.post("/", async (req, res) => {
     res.json(result);
 
   } catch (err) {
+    console.error(err);
     res.status(500).json({ error: "chat failed" });
   }
 
 });
-
-module.exports = router;
