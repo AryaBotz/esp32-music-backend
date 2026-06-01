@@ -1,26 +1,27 @@
 const fs = require("fs");
-const axios = require("axios");
-const FormData = require("form-data");
+const fetch = require("node-fetch");
+
+const GROQ_API_KEY = process.env.GROQ_API_KEY;
 
 async function transcribeAudio(filePath) {
 
-  const form = new FormData();
+  const file = fs.readFileSync(filePath);
 
-  form.append("file", fs.createReadStream(filePath));
-  form.append("model", "whisper-large-v3");
+  const formData = new FormData();
+  formData.append("file", new Blob([file]), "audio.wav");
+  formData.append("model", "whisper-large-v3");
 
-  const res = await axios.post(
-    "https://api.groq.com/openai/v1/audio/transcriptions",
-    form,
-    {
-      headers: {
-        Authorization: `Bearer ${process.env.GROQ_API_KEY}`,
-        ...form.getHeaders()
-      }
-    }
-  );
+  const res = await fetch("https://api.groq.com/openai/v1/audio/transcriptions", {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${GROQ_API_KEY}`
+    },
+    body: formData
+  });
 
-  return res.data.text;
+  const data = await res.json();
+
+  return data.text;
 }
 
 module.exports = { transcribeAudio };
