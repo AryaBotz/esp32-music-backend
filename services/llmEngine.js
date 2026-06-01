@@ -3,36 +3,26 @@ const fetch = require("node-fetch");
 const GROQ_API_KEY = process.env.GROQ_API_KEY;
 
 async function analyzeWithLLM(text) {
-  const prompt = `
-You are a strict emotion classifier.
 
-Analyze user text and return ONLY valid JSON.
+  const prompt = `
+You are a strict classifier.
+
+Return ONLY valid JSON.
 
 Allowed moods:
-- sad
-- happy
-- focus
-- sleep
-- neutral
+sad, happy, focus, sleep, neutral
 
 Allowed intents:
-- music
-- question
-- command
-
-RULES:
-- Return ONLY JSON
-- No markdown
-- No explanation
-
-Format:
-{
-  "mood": "sad|happy|focus|sleep|neutral",
-  "intent": "music|question|command"
-}
+music, question, command
 
 User text:
 ${text}
+
+Output format:
+{
+  "mood": "",
+  "intent": ""
+}
 `;
 
   const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
