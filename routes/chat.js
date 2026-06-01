@@ -8,8 +8,6 @@ async function processChat(text) {
 
   const ai = await analyzeWithLLM(text);
 
-  console.log("LLM RESULT:", ai);
-
   const mood = ai?.mood || "neutral";
 
   const audio_url = await getMusicFromMood(mood);
