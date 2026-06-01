@@ -37,7 +37,7 @@ router.post("/", upload.single("audio"), async (req, res) => {
     // =====================
     // MUSIC SEARCH
     // =====================
-    const track = await searchTrack(ai.ai_query);
+    const track = await searchTrack(ai.query);
 
     // cleanup file
     fs.unlinkSync(filePath);
@@ -46,7 +46,7 @@ router.post("/", upload.single("audio"), async (req, res) => {
       text,
       mood: ai.mood,
       intent: ai.intent,
-      ai_query: ai.ai_query,
+      ai_query: ai.query,
       title: track?.title || "Relaxing Background Music",
       artist: track?.artist || "Unknown",
       audio_url:
