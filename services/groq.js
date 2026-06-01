@@ -43,7 +43,7 @@ async function whisper(filePath) {
 // =====================
 // CHAT LLM
 // =====================
-async function chat(messages) {
+ async function chat(messages) {
   const res = await fetch(
     "https://api.groq.com/openai/v1/chat/completions",
     {
@@ -53,7 +53,7 @@ async function chat(messages) {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "llama-3.1-70b-versatile",
+        model: "llama-3.1-8b-instant", // 🔥 FIX HERE
         messages,
       }),
     }
@@ -66,6 +66,6 @@ async function chat(messages) {
   }
 
   return data;
-}
+ }
 
 module.exports = { whisper, chat };
