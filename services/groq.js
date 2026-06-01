@@ -1,31 +1,36 @@
-const FormData = require("form-data");
+const fs = require("fs");
 
 const GROQ_API_KEY = process.env.GROQ_API_KEY;
 
 // =====================
 // WHISPER STT
 // =====================
-async function whisper(fileStream) {
+async function whisper(filePath) {
+
+  const buffer = fs.readFileSync(filePath);
 
   const form = new FormData();
 
-form.append(
-  "file",
-  fileStream,
-  {
-    filename: "audio.mp3",
-    contentType: "audio/mpeg"
-  }
-);
+  form.append(
+    "file",
+    new Blob(
+      [buffer],
+      { type: "audio/mpeg" }
+    ),
+    "audio.mp3"
+  );
 
-form.append("model", "whisper-large-v3");
+  form.append(
+    "model",
+    "whisper-large-v3"
+  );
+
   const res = await fetch(
     "https://api.groq.com/openai/v1/audio/transcriptions",
     {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${GROQ_API_KEY}`,
-        ...form.getHeaders()
+        Authorization: `Bearer ${GROQ_API_KEY}`
       },
       body: form
     }
@@ -66,9 +71,7 @@ async function chat(messages) {
     }
   );
 
-  const data = await res.json();
-
-  return data;
+  return await res.json();
 }
 
 module.exports = {
