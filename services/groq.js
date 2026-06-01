@@ -4,12 +4,19 @@ const FormData = require("form-data");
 const GROQ_API_KEY = process.env.GROQ_API_KEY;
 
 // =====================
-// WHISPER STT (FIXED)
+// WHISPER STT (FIXED & STABLE)
 // =====================
 async function whisper(filePath) {
   const form = new FormData();
 
-  form.append("file", fs.createReadStream(filePath), {
+  // ⚠️ FIX 1: jangan pakai createReadStream tanpa cek file
+  if (!fs.existsSync(filePath)) {
+    throw new Error("Audio file not found: " + filePath);
+  }
+
+  const stream = fs.createReadStream(filePath);
+
+  form.append("file", stream, {
     filename: "audio.mp3",
     contentType: "audio/mpeg",
   });
@@ -28,16 +35,24 @@ async function whisper(filePath) {
     }
   );
 
-  const data = await res.json();
+  const data = await res.json().catch(() => ({}));
 
   console.log("[GROQ STT STATUS]", res.status);
   console.log("[GROQ STT RESPONSE]", data);
 
+  // ⚠️ FIX 2: handle error lebih jelas
   if (!res.ok) {
-    throw new Error(JSON.stringify(data));
+    throw new Error(
+      data?.error?.message ||
+      JSON.stringify(data) ||
+      "STT failed"
+    );
   }
 
-  return data;
+  // ⚠️ FIX 3: pastikan text ada
+  return {
+    text: data.text || "",
+  };
 }
 
 // =====================
@@ -55,11 +70,20 @@ async function chat(messages) {
       body: JSON.stringify({
         model: "llama-3.1-70b-versatile",
         messages,
+        temperature: 0.7,
       }),
     }
   );
 
-  return await res.json();
+  const data = await res.json();
+
+  if (!res.ok) {
+    throw new Error(
+      data?.error?.message || "LLM request failed"
+    );
+  }
+
+  return data;
 }
 
 module.exports = {
