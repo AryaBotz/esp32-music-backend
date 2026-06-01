@@ -1,28 +1,17 @@
 const express = require("express");
-const { analyzeWithLLM } = require("../services/llmEngine");
-const { getMusicFromMood } = require("../services/musicEngine");
-
 const router = express.Router();
 
 async function processChat(text) {
-
-  const ai = await analyzeWithLLM(text);
-
-  const mood = ai.mood || "neutral";
-
-  const audio_url = await getMusicFromMood(mood);
-
   return {
-    mood,
-    intent: ai.intent,
-    ai_query: text,
-    title: `AI Playlist for ${mood}`,
-    audio_url
+    mood: "neutral",
+    audio_url: "test"
   };
 }
 
-// EXPORT ROUTER SAJA (INI PENTING)
-module.exports = router;
+router.post("/", async (req, res) => {
+  const result = await processChat(req.body.text);
+  res.json(result);
+});
 
-// expose function via attach (optional pattern)
-router.processChat = processChat;
+module.exports = router;
+module.exports.processChat = processChat;
