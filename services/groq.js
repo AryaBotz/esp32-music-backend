@@ -17,7 +17,8 @@ async function whisper(fileStream) {
     {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${GROQ_API_KEY}`
+        Authorization: `Bearer ${GROQ_API_KEY}`,
+        ...form.getHeaders()
       },
       body: form
     }
@@ -58,7 +59,9 @@ async function chat(messages) {
     }
   );
 
-  return await res.json();
+  const data = await res.json();
+
+  return data;
 }
 
 module.exports = {
