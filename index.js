@@ -9,13 +9,12 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+// FIX INI PENTING
 app.use("/chat", chatRoute);
 app.use("/stt", sttRoute);
 
 app.get("/", (req, res) => {
-  res.json({
-    status: "AI backend ready (STT + LLM + Music)"
-  });
+  res.json({ status: "OK" });
 });
 
 const PORT = process.env.PORT || 3000;
