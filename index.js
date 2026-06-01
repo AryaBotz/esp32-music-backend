@@ -9,7 +9,7 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// FIX INI PENTING
+// ROUTES
 app.use("/chat", chatRoute);
 app.use("/stt", sttRoute);
 
