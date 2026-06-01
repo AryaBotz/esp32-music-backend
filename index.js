@@ -9,7 +9,6 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// ROUTES
 app.use("/chat", chatRoute);
 app.use("/stt", sttRoute);
 
