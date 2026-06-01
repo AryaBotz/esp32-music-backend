@@ -9,7 +9,7 @@ async function processChat(text) {
     mood,
     ai_query: `${mood} ${text}`,
     title: `Playlist for ${mood}`,
-    audio_url: getMusicFromMood(mood)
+    audio_url: await getMusicFromMood(mood)
   };
 }
 
