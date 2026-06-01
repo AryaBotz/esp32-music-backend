@@ -20,7 +20,6 @@ app.get("/", (req, res) => {
   });
 });
 
-// IMPORTANT: Railway needs this
 const PORT = process.env.PORT || 3000;
 
 app.listen(PORT, () => {
