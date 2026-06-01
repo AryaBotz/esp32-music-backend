@@ -1,34 +1,29 @@
 const express = require("express");
-const multer = require("multer");
-
-const { transcribeAudio } = require("../services/whisperService");
-const { processChat } = require("./chat");
-
 const router = express.Router();
+const multer = require("multer");
+const fs = require("fs");
+
 const upload = multer({ dest: "uploads/" });
+const { whisper } = require("../services/groq");
 
 router.post("/", upload.single("audio"), async (req, res) => {
 
   try {
 
-    if (!req.file) {
-      return res.status(400).json({ error: "audio required" });
-    }
+    const fileStream = fs.createReadStream(req.file.path);
 
-    const text = await transcribeAudio(req.file.path);
+    const result = await whisper(fileStream);
 
-    const result = await processChat(text);
+    fs.unlinkSync(req.file.path);
 
     res.json({
-      transcript: text,
-      ...result
+      text: result.text || ""
     });
 
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "stt failed" });
+    res.status(500).json({ error: "STT failed" });
   }
-
 });
 
 module.exports = router;
