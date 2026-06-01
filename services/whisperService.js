@@ -1,5 +1,4 @@
 const fs = require("fs");
-const fetch = require("node-fetch");
 
 const GROQ_API_KEY = process.env.GROQ_API_KEY;
 
