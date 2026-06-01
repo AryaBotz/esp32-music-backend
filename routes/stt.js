@@ -1,7 +1,7 @@
 const express = require("express");
 const multer = require("multer");
 const { transcribeAudio } = require("../services/whisperService");
-const { processChat } = require("./chat").__processChat;
+const { processChat } = require("./chat");
 
 const router = express.Router();
 const upload = multer({ dest: "uploads/" });
@@ -11,7 +11,7 @@ router.post("/", upload.single("audio"), async (req, res) => {
   try {
 
     if (!req.file) {
-      return res.status(400).json({ error: "no audio" });
+      return res.status(400).json({ error: "no audio file" });
     }
 
     const text = await transcribeAudio(req.file.path);
