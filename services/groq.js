@@ -9,9 +9,16 @@ async function whisper(fileStream) {
 
   const form = new FormData();
 
-  form.append("file", fileStream);
-  form.append("model", "whisper-large-v3");
+form.append(
+  "file",
+  fileStream,
+  {
+    filename: "audio.mp3",
+    contentType: "audio/mpeg"
+  }
+);
 
+form.append("model", "whisper-large-v3");
   const res = await fetch(
     "https://api.groq.com/openai/v1/audio/transcriptions",
     {
