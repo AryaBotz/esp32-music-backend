@@ -2,18 +2,26 @@ const express = require("express");
 const router = express.Router();
 
 const { chat } = require("../services/groq");
-const { searchTrack } = require("../services/jamendo");
 
 // =========================
-// SAFE JSON PARSER
+// SAFE PARSER (ANTI CRASH)
 // =========================
 function safeParse(text) {
   try {
-    // ambil JSON pertama yang valid dari output LLM
-    const match = text.match(/\{[\s\S]*\}/);
-    if (!match) return null;
-    return JSON.parse(match[0]);
-  } catch (e) {
+    if (!text) return null;
+
+    // ambil JSON dari output LLM
+    const start = text.indexOf("{");
+    const end = text.lastIndexOf("}");
+
+    if (start === -1 || end === -1) return null;
+
+    const jsonStr = text.substring(start, end + 1);
+
+    return JSON.parse(jsonStr);
+
+  } catch (err) {
+    console.log("[LLM RAW OUTPUT]:", text);
     return null;
   }
 }
@@ -27,43 +35,41 @@ router.post("/", async (req, res) => {
 
     const { text } = req.body;
 
-    if (!text || text.trim().length === 0) {
-      return res.status(400).json({ error: "Empty text" });
+    // =========================
+    // VALIDATION INPUT
+    // =========================
+    if (!text || typeof text !== "string") {
+      return res.status(400).json({
+        error: "Missing or invalid text"
+      });
     }
 
+    console.log("[USER TEXT]:", text);
+
     // =========================
-    // 1. MOOD-AWARE PROMPT
+    // CALL LLM
     // =========================
     const llm = await chat([
       {
         role: "system",
         content: `
-You are a MUSIC MOOD ENGINE.
-
-Task:
-Analyze user text and generate music intent.
+You are a STRICT JSON music mood engine.
 
 RULES:
-- mood must be ONE of: sad, happy, focus, sleep, neutral
-- ai_query must strongly match mood
-- output ONLY valid JSON (no markdown, no text)
+- Output ONLY valid JSON
+- No markdown
+- No explanation
+- No extra text
+- No code block
 
-MOOD GUIDELINES:
+MOODS:
+- sad
+- happy
+- focus
+- sleep
+- neutral
 
-1. sad →
-   ai_query: calm piano, emotional, soft sad music, ambient slow
-
-2. happy →
-   ai_query: upbeat pop, happy instrumental, energetic chill
-
-3. focus →
-   ai_query: lofi study beats, ambient work music, concentration music
-
-4. sleep →
-   ai_query: deep sleep music, rain sounds, calm ambient, soft piano
-
-5. neutral →
-   ai_query: chill music, background music, relaxing instrumental
+MAP USER TEXT → MUSIC INTENT
 
 OUTPUT FORMAT:
 {
@@ -71,6 +77,13 @@ OUTPUT FORMAT:
   "ai_query": "",
   "intent": "music"
 }
+
+EXAMPLES:
+- sad → slow piano emotional ambient
+- happy → upbeat happy pop chill
+- focus → lofi study beats calm focus
+- sleep → rain ambient deep sleep music
+- neutral → chill background music
 `
       },
       {
@@ -79,39 +92,41 @@ OUTPUT FORMAT:
       }
     ]);
 
-    const content = llm.choices?.[0]?.message?.content || "";
+    const content = llm?.choices?.[0]?.message?.content || "";
+
+    console.log("[LLM RAW]:", content);
 
     const parsed = safeParse(content);
 
+    // =========================
+    // FALLBACK IF PARSE FAIL
+    // =========================
     if (!parsed) {
-      return res.status(500).json({
-        error: "LLM parse failed",
-        raw: content
+      console.log("[FALLBACK USED]");
+
+      return res.json({
+        mood: "neutral",
+        ai_query: "chill ambient music",
+        intent: "music"
       });
     }
 
     // =========================
-    // 2. JAMENDO SEARCH
+    // FINAL RESPONSE
     // =========================
-    const track = await searchTrack(parsed.ai_query);
-
-    // fallback kalau jamendo kosong
-    const result = {
-      mood: parsed.mood,
-      intent: "music",
-      ai_query: parsed.ai_query,
-      title: track?.title || "Relaxing Music",
-      audio_url: track?.audio_url || null
-    };
-
-    // =========================
-    // 3. RESPONSE
-    // =========================
-    res.json(result);
+    res.json({
+      mood: parsed.mood || "neutral",
+      ai_query: parsed.ai_query || "chill music",
+      intent: parsed.intent || "music"
+    });
 
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "AI pipeline failed" });
+
+    console.error("[AI ERROR]:", err);
+
+    res.status(500).json({
+      error: "AI processing failed"
+    });
   }
 });
 
