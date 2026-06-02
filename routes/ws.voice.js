@@ -1,30 +1,28 @@
 const WebSocket = require("ws");
-const { handleAudioChunk } = require("../core/stream.router");
+const { handleChunk } = require("../core/stream.router");
 
-function voiceWS(server) {
+module.exports = function voiceWS(server) {
   const wss = new WebSocket.Server({ server, path: "/ws/voice" });
 
   wss.on("connection", (ws) => {
-    console.log("Client connected");
-
     let sessionId = null;
 
     ws.on("message", async (msg) => {
       try {
-        // ESP32 sends JSON header OR raw PCM
+        // init message (JSON)
         if (typeof msg === "string") {
           const data = JSON.parse(msg);
           sessionId = data.sessionId;
           return;
         }
 
-        // binary PCM chunk
-        const result = await handleAudioChunk(sessionId, msg);
+        // binary audio chunk
+        const result = await handleChunk(sessionId, msg);
 
-        if (result?.text) {
+        if (result?.partial) {
           ws.send(JSON.stringify({
             type: "partial",
-            text: result.text
+            text: result.partial
           }));
         }
 
@@ -39,13 +37,5 @@ function voiceWS(server) {
         console.error(e);
       }
     });
-
-    ws.on("close", () => {
-      console.log("Client disconnected");
-    });
   });
-
-  return wss;
-}
-
-module.exports = voiceWS;
+};
