@@ -20,6 +20,11 @@ async function chat(messages) {
     }
   );
 
+  if (!res.ok) {
+    const errorData = await res.json();
+    throw new Error(`Groq API error: ${res.status} - ${JSON.stringify(errorData)}`);
+  }
+
   return await res.json();
 }
 

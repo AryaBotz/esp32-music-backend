@@ -30,9 +30,9 @@ function addChunk(sessionId, chunk) {
 }
 
 /**
- * GET RAW BUFFER SIZE (for stream logic)
+ * GET BUFFER SIZE (for stream logic)
  */
-function getBufferBufferSize(sessionId) {
+function getBufferSize(sessionId) {
   const session = getSession(sessionId);
   return session.chunks.length;
 }
@@ -53,10 +53,34 @@ function clearBuffer(sessionId) {
   session.chunks = [];
 }
 
+/**
+ * DELETE SESSION (cleanup)
+ */
+function deleteSession(sessionId) {
+  sessions.delete(sessionId);
+}
+
+/**
+ * CLEANUP OLD SESSIONS (prevent memory leak)
+ * Runs every 5 minutes to remove sessions older than 1 hour
+ */
+setInterval(() => {
+  const now = Date.now();
+  const ONE_HOUR = 3600000;
+  
+  for (const [sessionId, session] of sessions.entries()) {
+    if (now - session.createdAt > ONE_HOUR) {
+      sessions.delete(sessionId);
+      console.log(`[CLEANUP] Deleted expired session: ${sessionId}`);
+    }
+  }
+}, 300000);
+
 module.exports = {
   getSession,
   addChunk,
-  getBufferBufferSize,
+  getBufferSize,
   getAudioBuffer,
-  clearBuffer
+  clearBuffer,
+  deleteSession
 };

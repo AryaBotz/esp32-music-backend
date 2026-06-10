@@ -1,4 +1,4 @@
-const { addChunk, getBufferText } = require("./audio.buffer");
+const { addChunk, getBufferSize } = require("./audio.buffer");
 const { transcribeAudio } = require("../services/stt.engine");
 const { analyzeIntent } = require("../services/llm.engine");
 const { searchMusic } = require("../services/music.engine");
@@ -18,7 +18,7 @@ async function handleAudioStream(sessionId, chunk) {
   // =========================
   addChunk(sessionId, chunk);
 
-  const bufferSize = getBufferBufferSize(sessionId);
+  const bufferSize = getBufferSize(sessionId);
 
   // kirim partial kalau masih kecil
   if (bufferSize < 5) {
