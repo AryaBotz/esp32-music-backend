@@ -1,4 +1,4 @@
-const { chat } = require("./groq.client");
+const { chat } = require("./groq");
 
 /**
  * SAFE JSON PARSER

@@ -73,11 +73,19 @@ module.exports = function voiceGateway(server) {
       } catch (err) {
         console.error("[WS ERROR]", err);
 
-        ws.send(JSON.stringify({
-          type: "error",
-          message: err.message
-        }));
+        try {
+          ws.send(JSON.stringify({
+            type: "error",
+            message: err.message || "Internal server error"
+          }));
+        } catch (sendErr) {
+          console.error("[WS SEND ERROR]", sendErr);
+        }
       }
+    });
+
+    ws.on("error", (err) => {
+      console.error("[WS CONNECTION ERROR]", err);
     });
 
     ws.on("close", () => {
